@@ -54,7 +54,7 @@ type ServerInfo struct {
 	SystemModel        string
 }
 
-func getInfoByRedFish(host string, user string, password string) (int, ServerInfo) {
+func getInfoByRedFish(host string, user string, password string, basicAuth bool) (int, ServerInfo) {
 
 	record := ServerInfo{
 		User:               user,
@@ -74,7 +74,7 @@ func getInfoByRedFish(host string, user string, password string) (int, ServerInf
 		Username:  user,
 		Password:  password,
 		Insecure:  true,
-		BasicAuth: false,
+		BasicAuth: basicAuth,
 	}
 	c, err := gofish.Connect(config)
 	if err != nil {
@@ -91,6 +91,8 @@ func getInfoByRedFish(host string, user string, password string) (int, ServerInf
 		//fmt.Printf("[error]auth failed %s %v\n", host, err.Error())
 		return -2, record
 	}
+
+	defer c.Logout()
 
 	systemModel := "Unknown"
 	systemManufacturer := "Unknown"
@@ -180,11 +182,16 @@ func doScanByRedfish(hosts []string) {
 
 		if aliveIcmp || alivePort {
 
-			ret, sInfo := getInfoByRedFish(host, *redfishUser, *redfishPassword1)
+			basicAuth := false
+			if portsStatus["443"] && portsStatus["9666"] && portsStatus["9999"] {
+				basicAuth = true
+			}
+
+			ret, sInfo := getInfoByRedFish(host, *redfishUser, *redfishPassword1, basicAuth)
 			if *redfishPassword2 != "" && ret < 0 {
-				ret, sInfo = getInfoByRedFish(host, *redfishUser, *redfishPassword2)
+				ret, sInfo = getInfoByRedFish(host, *redfishUser, *redfishPassword2, basicAuth)
 			} else if *redfishPassword3 != "" && ret < 0 {
-				ret, sInfo = getInfoByRedFish(host, *redfishUser, *redfishPassword2)
+				ret, sInfo = getInfoByRedFish(host, *redfishUser, *redfishPassword2, basicAuth)
 			}
 			_ = ret
 
